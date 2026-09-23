@@ -82,12 +82,25 @@ def feedback():
     
     if request.method == 'POST':
         comment = request.form.get('comment')
-        
-        # TODO: BHAGYA - Add Log Injection vulnerable code here
-        # EXAMPLE:
-        # VULNERABILITY: Direct user input concatenation in logs
-        # RISK: Attacker can inject CRLF characters (\r\n) to forge fake log entries
-        logging.info(f"User Feedback: {comment}")
+        user = session.get('user', 'anonymous')
+
+        # ---------------------------------------------------------------
+        # VULNERABILITY: Log Injection
+        # (CWE-117: Improper Output Neutralization for Logs)
+        #
+        # The user-supplied 'comment' is written STRAIGHT into the log
+        # message with no sanitisation. Python's logging module writes
+        # whatever bytes it is given to app_vulnerable.log verbatim,
+        # including any control characters in the user's input.
+        #
+        # RISK: If 'comment' contains CRLF characters (\r\n), the single
+        # intended entry is split into MULTIPLE lines on disk. An attacker
+        # can therefore FORGE fake log records that look identical to
+        # genuine ones (log forging) — e.g. faking an admin login or
+        # burying their own activity — destroying the integrity of the
+        # audit trail that investigators rely on.
+        # ---------------------------------------------------------------
+        logging.info(f"New feedback received from user '{user}': {comment}")
         
         return '''
             <h1>Feedback Submitted!</h1>
