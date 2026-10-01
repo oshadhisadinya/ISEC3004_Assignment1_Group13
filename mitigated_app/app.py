@@ -125,7 +125,7 @@ PROFILE_PAGE = """
         name="csrf_token"
         value="{{ csrf_token }}"
     
-
+>
         <label>New Email:</label>
 
         <input
