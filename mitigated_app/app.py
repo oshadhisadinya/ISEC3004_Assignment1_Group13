@@ -1,11 +1,22 @@
 from flask import Flask, request, session, redirect, url_for, render_template_string, abort
 import secrets
+import logging
 
 app = Flask(__name__)
 
 # Secret key used by Flask to manage sessions.
 # This is only for the controlled university demonstration.
 app.secret_key = "csrf-demo-secret-key"
+
+# ============================================================
+# SECURE LOGGING SETUP
+# ============================================================
+
+logging.basicConfig(
+    filename="app_mitigated.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 # ============================================================
@@ -19,6 +30,20 @@ users = {
     }
 }
 
+# ============================================================
+# LOG INJECTION MITIGATION
+# ============================================================
+
+def sanitize_log_value(value):
+    """
+    Neutralize CR and LF characters before writing user-controlled
+    data to a log. Escaping them preserves the evidence while ensuring
+    that the input remains on one physical log line.
+    """
+    if value is None:
+        return ""
+
+    return str(value).replace("\r", "\\r").replace("\n", "\\n")
 
 # ============================================================
 # LOGIN PAGE
@@ -142,6 +167,65 @@ PROFILE_PAGE = """
 
     <br>
 
+    <a href="/feedback">Go to Feedback Page (Log Injection)</a>
+|
+    <a href="/logout">Logout</a>
+
+</body>
+</html>
+"""
+
+# ============================================================
+# FEEDBACK PAGE — LOG INJECTION MITIGATED
+# ============================================================
+
+FEEDBACK_PAGE = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Log Injection Mitigation - Feedback</title>
+</head>
+
+<body>
+
+    <h1>Submit Feedback</h1>
+
+    <p>
+        Welcome,
+        <strong>{{ username }}</strong>
+    </p>
+
+    <hr>
+
+    <!--
+    User feedback is sanitized on the server before it is written
+    to app_mitigated.log. CR and LF control characters are escaped,
+    preventing attackers from creating additional forged log lines.
+    -->
+
+    <form method="POST" action="/feedback">
+
+        <label>Your Comment:</label><br>
+
+        <textarea
+            name="comment"
+            rows="4"
+            cols="50"
+            required
+        ></textarea>
+
+        <br><br>
+
+        <button type="submit">
+            Submit Feedback
+        </button>
+
+    </form>
+
+    <br>
+
+    <a href="/profile">Back to Profile</a>
+    |
     <a href="/logout">Logout</a>
 
 </body>
@@ -338,6 +422,58 @@ def change_email():
 
     </html>
     """
+# ============================================================
+# SECURITY-ENHANCED FEEDBACK ENDPOINT
+# LOG INJECTION MITIGATION — CWE-117
+# ============================================================
+
+@app.route("/feedback", methods=["GET", "POST"])
+def feedback():
+
+    if "username" not in session:
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+
+        comment = request.form.get("comment")
+
+        if not comment:
+            return "Feedback comment is required.", 400
+
+        user = session.get("username", "anonymous")
+
+        # Neutralize CR and LF characters in every user-controlled
+        # value before including it in a log message. The characters
+        # are retained as visible escape sequences, but cannot start
+        # additional physical log lines.
+        safe_user = sanitize_log_value(user)
+        safe_comment = sanitize_log_value(comment)
+
+        logging.info(
+            "New feedback received from user '%s': %s",
+            safe_user,
+            safe_comment
+        )
+
+        # Use the sanitized value in console output as well.
+        print(
+            f"\n[LOG INJECTION MITIGATED] "
+            f"User: {safe_user} submitted: {safe_comment}\n"
+        )
+
+        return """
+        <h1>Feedback Submitted Safely!</h1>
+        <p>Your feedback was recorded using secure log handling.</p>
+        <a href="/profile">Back to Profile</a>
+        """
+
+    username = session["username"]
+
+    return render_template_string(
+        FEEDBACK_PAGE,
+        username=username
+    )
+
 
 
 # ============================================================
