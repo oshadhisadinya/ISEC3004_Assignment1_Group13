@@ -41,3 +41,53 @@ ISEC3004_Assignment1_Group13/
 ├── docs/                 # Contains Meeting Minutes, Gantt Chart, and QA Checklists
 ├── .gitignore            # Files and folders to be ignored by Git
 └── README.md             # Project documentation and setup instructions
+
+##🚀 How to Run the Application
+Prerequisites
+Ensure you have the following installed:
+Python 3.8 or higher
+Git
+Step 1: Clone the Repository
+Open your terminal or command prompt and run:
+bash
+
+12
+Step 2: Setup Virtual Environment (Recommended)
+For Windows (PowerShell):
+powershell
+
+12
+(Note: If you get an execution policy error, run Set-ExecutionPolicy Unrestricted -Scope CurrentUser first).
+For Mac/Linux:
+bash
+
+12
+Step 3: Install Dependencies
+bash
+
+1
+Step 4: Run the Application
+To run the Vulnerable App:
+bash
+
+12
+To run the Mitigated (Secure) App:
+bash
+
+12
+The application will start on http://127.0.0.1:5000.
+Step 5: Demo Login Credentials
+Username: student
+Password: password123
+⚔️ Exploitation & Live Demo Instructions
+For the live demonstration and grading purposes, the exploit scripts are located in the exploits/ directory:
+CSRF Exploit:
+Open exploits/csrf_payload.html in a browser while logged into the vulnerable app, OR use the provided Burp Suite Repeater requests to send a forged POST request to /change-email without a CSRF token.
+Log Injection Exploit:
+Run python exploits/log_injection_exploit.py while the vulnerable app is running.
+Then, inspect the app_vulnerable.log file to see the forged "Admin access granted" entry.
+📋 Project Management & Version Control
+Task Tracking: Managed via GitHub Projects Board (Columns: To Do, In Progress, Testing/QA, Done).
+Schedule: Project timeline strictly followed via Gantt Chart milestones.
+Version Control: We followed a professional Git workflow using feature branches (e.g., feature/csrf-vulnerable, feature/log-injection-mitigation) and Pull Requests (PRs) for all code integrations to ensure code review and prevent merge conflicts.
+
