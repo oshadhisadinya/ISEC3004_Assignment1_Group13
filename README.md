@@ -562,15 +562,7 @@ Collaborative documents are maintained in the team's OneDrive folder:
 
 ---
 
-# ⚠️ Educational Use Disclaimer
 
-The vulnerable application and exploit scripts in this repository are intentionally insecure and are provided **strictly for educational and assessment purposes**.
-
-Do not use these techniques against systems, applications, accounts, or networks without explicit authorisation.
-
-The demonstrations should be performed only in a controlled local environment.
-
----
 
 # 📚 References
 
